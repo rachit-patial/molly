@@ -1,0 +1,36 @@
+# Ignore Cargo & Rust build files
+/target/  
+**/*.rs.bk  
+Cargo.lock  
+
+# Ignore Rust debugging and profiling files
+debug.log  
+*.dSYM/  
+*.profraw  
+*.profdata  
+
+# Ignore temporary files
+*.log  
+*.tmp  
+*.swp  
+*.bak  
+*.~  
+
+# Ignore Rust testing files
+/tests/tmp/  
+/tests/output/  
+
+# Ignore IDE and Editor-specific files
+.idea/  
+.vscode/  
+*.iml  
+*.suo  
+*.ntvs*  
+*.njsproj  
+*.sln  
+*.sw?  
+*.dir-locals.el  
+
+# Ignore system files
+.DS_Store  
+Thumbs.db  
