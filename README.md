@@ -196,8 +196,3 @@ WantedBy=multi-user.target
    sudo systemctl enable --now usb-guard
    ```
 
----
-
-## License
-
-Distributed under the **MIT License**. See `LICENSE` for more information.
