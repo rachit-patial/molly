@@ -1,0 +1,13 @@
+block_unknown_mass_storage = true
+lock_screen_on_unauthorized = false
+
+[[allowed_devices]]
+name = "Personal Motorola Phone"
+vendor_id = 0x22B8
+product_id = 0x2E82
+serial_number = "ZX1G223456"
+
+[[allowed_devices]]
+name = "Work Mouse"
+vendor_id = 0x046D
+product_id = 0xC52B
