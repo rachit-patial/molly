@@ -1,4 +1,4 @@
-# USB Security Guard & Locker (`usb-guard-rs`)
+# USB Security Guard & Locker (`Molly`)
 
 A lightweight, system-level security daemon written in **Rust** that monitors the USB bus in real time using `libusb` / `rusb`. It inspects connected USB devices against an explicit configuration policy, logs security audit events, and triggers OS-level defense mechanisms (such as screen locking or custom alert handlers) whenever an unauthorized or untrusted USB device is inserted.
 
