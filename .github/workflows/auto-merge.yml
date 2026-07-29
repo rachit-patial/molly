@@ -9,6 +9,27 @@ permissions:
   contents: write
 
 jobs:
+  preview-changes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Display Diff & Commit Summary
+        run: |
+          echo "### 📝 Changes to be merged into main" >> $GITHUB_STEP_SUMMARY
+          echo "#### Commits:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          git log main..HEAD --oneline >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          echo "#### File Diff Summary:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          git diff --stat origin/main..HEAD >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+  
   merge-to-main:
     runs-on: ubuntu-latest
     steps:
