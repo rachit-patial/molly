@@ -16,13 +16,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Fetch main branch
+        run: git fetch origin main:main
       
       - name: Display Diff & Commit Summary
         run: |
           echo "### 📝 Changes to be merged into main" >> $GITHUB_STEP_SUMMARY
           echo "#### Commits:" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          git log main..HEAD --oneline >> $GITHUB_STEP_SUMMARY
+          git log origin/main..HEAD --oneline >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           
           echo "#### File Diff Summary:" >> $GITHUB_STEP_SUMMARY
