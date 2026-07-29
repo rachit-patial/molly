@@ -1,0 +1,30 @@
+name: Auto Merge Feature to Main
+
+on:
+  push:
+    branches:
+      - 'feature*'
+
+permissions:
+  contents: write
+
+jobs:
+  merge-to-main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up git Identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge feature branch into main
+        run: |
+          git checkout main
+          git pull origin main
+          git merge --no-ff ${{ github.ref }} -m "Auto-merge ${{ github.ref_name }} into main"
+          git push origin main
