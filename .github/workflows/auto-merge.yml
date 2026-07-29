@@ -3,7 +3,7 @@ name: Auto Merge Feature to Main
 on:
   push:
     branches:
-      - 'feature/**'
+      - 'feature*'
 
 permissions:
   contents: write
