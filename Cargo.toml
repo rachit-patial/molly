@@ -9,3 +9,4 @@ libmtp-rs = "0.7.7"
 rusb = "0.9.4"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8"
+clap = { version = "4.4", features = ["derive"] }
