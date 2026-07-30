@@ -197,4 +197,3 @@ WantedBy=multi-user.target
    ```
 
 ---
-### If you got any idea on which direction to direct this project, then I will love to hear your input

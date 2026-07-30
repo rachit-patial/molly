@@ -1,9 +1,30 @@
+use clap::{Parser, Subcommand};
 use rusb::{Context, Device, DeviceDescriptor, Hotplug, Registration, UsbContext};
 use serde::Deserialize;
 use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
+
+#[derive(Parser)]
+#[command(name = "usbguard")]
+#[command(about = "A CLI tool and background service to monitor and secure USB devices", long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// List all currently connected USB devices
+    List,
+    /// Run the background USB monitoring and security service
+    Monitor {
+        /// Path to the configuration file
+        #[arg(short, long, default_value = "config.toml")]
+        config: String,
+    },
+}
 
 #[derive(Debug, Deserialize)]
 struct Config {
@@ -25,37 +46,6 @@ struct UsbGuardHandler {
 }
 
 impl UsbGuardHandler {
-    fn inspect_and_enforce(&self, device: &Device<Context>, descriptor: DeviceDescriptor) {
-        let vid = descriptor.vendor_id();
-        let pid = descriptor.product_id();
-
-        let handle = device.open();
-        let serial = match &handle {
-            Ok(h) => h.read_serial_number_string_ascii(&descriptor).ok(),
-            Err(_) => None,
-        };
-
-        let is_allowed = self.config.allowed_devices.iter().any(|allowed| {
-            if allowed.vendor_id != vid || allowed.product_id != pid {
-                return false;
-            }
-            if let Some(ref expected_serial) = allowed.serial_number {
-                return serial.as_ref() == Some(expected_serial);
-            }
-            true
-        });
-
-        if is_allowed {
-            println!("[ALLOWED] Safe device attached: {:04x}:{:04x}", vid, pid);
-        } else {
-            eprintln!(
-                "[ALERT] Unauthorized USB device detected! VID: {:04x}, PID: {:04x}, Seria: {:?}",
-                vid, pid, serial
-            );
-            self.trigger_defense_action(vid, pid);
-        }
-    }
-
     fn trigger_defense_action(&self, vid: u16, pid: u16) {
         eprintln!("[AUDIT] Security event logged for {:04x}:{:04x}", vid, pid);
 
@@ -84,16 +74,14 @@ impl<T: UsbContext> Hotplug<T> for UsbGuardHandler {
             let vid = descriptor.vendor_id();
             let pid = descriptor.product_id();
 
-            println!(
-                "[EVENT] USB Plugged in -> VID: {:04x}, PID: {:04x}",
-                vid, pid
-            );
+            println!("[EVENT] USB Plugged in -> VID: {:04x}, PID: {:04x}", vid, pid);
 
             let is_known = self
                 .config
                 .allowed_devices
                 .iter()
                 .any(|d| d.vendor_id == vid && d.product_id == pid);
+
             if !is_known {
                 self.trigger_defense_action(vid, pid);
             }
@@ -111,16 +99,51 @@ impl<T: UsbContext> Hotplug<T> for UsbGuardHandler {
     }
 }
 
-fn main() -> rusb::Result<()> {
-    let config_raw = fs::read_to_string("config.toml").unwrap_or_else(|_| {
-        eprintln!("Warning: config.toml not found, defaulting to strict mode.");
+fn list_devices() -> rusb::Result<()> {
+    println!("{:<10} {:<10} {:<20} {:<20} {:<15}", "VID", "PID", "Manufacturer", "Product", "Serial");
+    println!("{}", "-".repeat(75));
+
+    for device in rusb::devices()?.iter() {
+        let descriptor = match device.device_descriptor() {
+            Ok(d) => d,
+            Err(_) => continue,
+        };
+
+        let handle = device.open();
+        let timeout = Duration::from_millis(200);
+
+        let (mfg, prod, serial) = match handle {
+            Ok(ref h) => (
+                h.read_manufacturer_string_ascii(&descriptor).unwrap_or_else(|_| "Unknown".into()),
+                h.read_product_string_ascii(&descriptor).unwrap_or_else(|_| "Unknown".into()),
+                h.read_serial_number_string_ascii(&descriptor).unwrap_or_else(|_| "N/A".into()),
+            ),
+            Err(_) => ("Access Denied".into(), "Access Denied".into(), "N/A".into()),
+        };
+
+        println!(
+            "{:04x}       {:04x}       {:<20} {:<20} {:<15}",
+            descriptor.vendor_id(),
+            descriptor.product_id(),
+            truncate(&mfg, 18),
+            truncate(&prod, 18),
+            truncate(&serial, 15)
+        );
+    }
+
+    Ok(())
+}
+
+fn run_monitor(config_path: &str) -> rusb::Result<()> {
+    let config_raw = fs::read_to_string(config_path).unwrap_or_else(|_| {
+        eprintln!("Warning: {} not found, defaulting to strict mode.", config_path);
         String::from("block_unknown_mass_storage = true\nlock_screen_on_unauthorized=true\nallowed_devices = []")
     });
 
-    let config: Config = toml::from_str(&config_raw).expect("Invalid config.toml format");
+    let config: Config = toml::from_str(&config_raw).expect("Invalid config format");
 
     if !rusb::has_hotplug() {
-        eprintln!("Error: OS/libsub platform does not support USB hotplug events.");
+        eprintln!("Error: OS/libusb platform does not support USB hotplug events.");
         return Ok(());
     }
 
@@ -146,6 +169,24 @@ fn main() -> rusb::Result<()> {
     }
 
     println!("USB Security Guard Service Shutting down");
+    Ok(())
+}
+
+fn truncate(s: &str, max_len: usize) -> String {
+    if s.len() > max_len {
+        format!("{}...", &s[..max_len - 3])
+    } else {
+        s.to_string()
+    }
+}
+
+fn main() -> rusb::Result<()> {
+    let cli = Cli::parse();
+
+    match cli.command {
+        Commands::List => list_devices()?,
+        Commands::Monitor { config } => run_monitor(&config)?,
+    }
 
     Ok(())
 }
